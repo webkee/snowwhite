@@ -38,7 +38,8 @@ git branch -M main
 git remote add origin https://github.com/YOUR_USERNAME/snowwhite.git
 git push -u origin main
 
-# 방법 2: 헬퍼 스크립트 (YOUR_USERNAME을 본인 것으로 교체)
+# 방법 2: 헬퍼 스크립트 (프로젝트 루트에서 실행, YOUR_USERNAME을 본인 것으로 교체)
+cd /Users/igigi/cursor_ws/snowwhite   # 또는 snowwhite 루트로 이동
 ./scripts/push-to-github.sh https://github.com/YOUR_USERNAME/snowwhite.git
 ```
 
