@@ -34,8 +34,12 @@ git branch -M main
 3. README, .gitignore는 추가하지 않음
 
 ```bash
+# 방법 1: 직접 실행
 git remote add origin https://github.com/YOUR_USERNAME/snowwhite.git
 git push -u origin main
+
+# 방법 2: 헬퍼 스크립트 (YOUR_USERNAME을 본인 것으로 교체)
+./scripts/push-to-github.sh https://github.com/YOUR_USERNAME/snowwhite.git
 ```
 
 `YOUR_USERNAME`을 본인 GitHub 사용자명으로 바꾸세요.
