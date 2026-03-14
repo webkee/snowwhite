@@ -1,23 +1,39 @@
-# GitHub + Vercel 배포 가이드
+# snowwhite 배포 가이드
 
-관리자 대시보드(cosmetic-admin)를 GitHub와 Vercel로 배포하는 방법입니다.
+프로젝트는 **관리자 대시보드**와 **FastAPI 백엔드**로 구성됩니다. 각각 다른 플랫폼에 배포합니다.
 
-> **현재 상태**: Git 초기화 완료, origin: `https://github.com/webkee/snowwhite.git`  
-> 로컬 커밋 후 `git push origin main` 실행 시 GitHub에 반영됨. (인증 필요)
+## 아키텍처 개요
 
-## 사전 요약
+```mermaid
+flowchart LR
+    subgraph repo [GitHub Monorepo]
+        Admin[cosmetic-admin]
+        API[api/]
+    end
 
-| 구성요소 | 위치 | 배포 대상 |
-|----------|------|-----------|
+    subgraph deploy [배포]
+        Vercel[Vercel]
+        Railway[Railway/Render/Fly.io]
+    end
+
+    Admin --> Vercel
+    API --> Railway
+    Vercel -->|NEXT_PUBLIC_API_URL| Railway
+```
+
+| 구성요소 | 디렉터리 | 배포 대상 |
+|----------|----------|-----------|
 | 관리자 대시보드 | `cosmetic-admin/` | Vercel |
-| FastAPI 백엔드 | `api/` | Railway / Render / Fly.io (별도) |
+| FastAPI 백엔드 | `api/` | Railway / Render / Fly.io |
 | 챗봇 (향후) | `cosmetic-chat/` | Vercel (별도 프로젝트) |
+
+> **현재 상태**: Git 초기화 완료, origin: `https://github.com/webkee/snowwhite.git`
 
 ---
 
-## 1단계: GitHub 저장소 설정
+## 1단계: GitHub에 코드 올리기
 
-### 1.1 로컬 Git 초기화
+### 1.1 로컬에서 Git 초기화 (미완료 시)
 
 ```bash
 cd /Users/igigi/cursor_ws/snowwhite
@@ -27,105 +43,104 @@ git commit -m "Initial commit: cosmetic-admin dashboard"
 git branch -M main
 ```
 
-### 1.2 GitHub 원격 저장소 생성 및 푸시
+### 1.2 원격 저장소 연결 및 푸시
 
-1. [github.com](https://github.com) → **New repository** 생성
-2. 저장소 이름 예: `snowwhite`
-3. README, .gitignore는 추가하지 않음
+- 현재 origin: `https://github.com/webkee/snowwhite.git` (이미 설정됨)
 
 ```bash
-# 방법 1: 직접 실행
-git remote add origin https://github.com/YOUR_USERNAME/snowwhite.git
+# 방법 A: 직접 푸시
 git push -u origin main
 
-# 방법 2: 헬퍼 스크립트 (프로젝트 루트에서 실행, YOUR_USERNAME을 본인 것으로 교체)
-cd /Users/igigi/cursor_ws/snowwhite   # 또는 snowwhite 루트로 이동
+# 방법 B: 헬퍼 스크립트 (원격 URL 변경 시)
 ./scripts/push-to-github.sh https://github.com/YOUR_USERNAME/snowwhite.git
 ```
 
-`YOUR_USERNAME`을 본인 GitHub 사용자명으로 바꾸세요.
+GitHub 인증(SSH key 또는 Personal Access Token)이 필요합니다.
 
 ---
 
-## 2단계: Vercel 배포
+## 2단계: 관리자 대시보드 Vercel 배포
 
-### 2.1 프로젝트 import
+### 2.1 Vercel 프로젝트 생성
 
-1. [vercel.com](https://vercel.com) → **Sign Up** (GitHub 로그인 권장)
-2. **Add New** → **Project**
-3. **Import** → `snowwhite` 저장소 선택
+1. [vercel.com](https://vercel.com) 접속 → GitHub 로그인
+2. **Add New** → **Project** → `snowwhite` 저장소 **Import**
 
-### 2.2 프로젝트 설정 (필수)
+### 2.2 프로젝트 설정
 
-| 설정 항목 | 값 | 설명 |
-|-----------|-----|------|
-| **Root Directory** | `cosmetic-admin` | Next.js 앱 위치 지정 |
-| **Framework Preset** | Next.js | 자동 감지 |
-| **Build Command** | `next build` | 기본값 |
-| **Output Directory** | (비워둠) | 기본값 |
+| 설정 항목 | 값 |
+|-----------|-----|
+| Root Directory | `cosmetic-admin` |
+| Framework Preset | Next.js |
+| Build Command | `next build` |
 
 ### 2.3 환경 변수
 
-**Settings** → **Environment Variables** 에 추가:
+**Settings** → **Environment Variables**:
 
-| Name | Value | Environments |
-|------|-------|--------------|
-| `NEXT_PUBLIC_API_URL` | `https://YOUR_API_URL` | Production, Preview |
+| Name | Value |
+|------|-------|
+| `NEXT_PUBLIC_API_URL` | 로컬: `http://localhost:8000` / 프로덕션: FastAPI 배포 URL |
 
-- **로컬 전용**: `http://localhost:8000`
-- **프로덕션**: FastAPI 배포 URL (Railway, Render 등)
+### 2.4 배포
 
-### 2.4 배포 실행
+**Deploy** 클릭 → 완료 후 `https://xxx.vercel.app` URL 생성
 
-**Deploy** 클릭 → 완료 후 `https://xxx.vercel.app` 형태 URL 발급
+### 2.5 자동 배포 (CI/CD)
 
----
-
-## 3단계: 자동 배포 (CI/CD)
-
-- `main` 브랜치에 push 시 → 자동 배포
-- PR 생성 시 → Preview 배포 URL 발급
+- `main` 브랜치에 push → 자동 Production 배포
+- PR 생성 → Preview 배포 URL 발급
 
 ---
 
-## 4단계: 백엔드 API 배포 (선택)
+## 3단계: FastAPI 백엔드 배포 (선택)
 
-크롤러 등 API 기능을 쓰려면 FastAPI(`api/`)를 별도 서비스에 배포합니다.
+크롤러 등 API를 사용하려면 백엔드를 별도 서비스에 배포합니다.
+
+### 플랫폼별 옵션
 
 | 플랫폼 | 난이도 | 비고 |
 |--------|--------|------|
-| Railway | 낮음 | `api/Dockerfile` 사용, Docker 배포 |
-| Render | 낮음 | Web Service, Dockerfile, 무료 티어 |
+| Railway | 낮음 | Dockerfile 기반 |
+| Render | 낮음 | Web Service, 무료 티어 |
 | Fly.io | 중간 | `fly launch` (api/ 폴더에서 실행) |
 
-**Dockerfile**: [api/Dockerfile](api/Dockerfile) — Playwright(Chromium) 포함. `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` 환경 변수 필수.
+### 배포 준비
 
-배포 후:
+1. **[api/Dockerfile](api/Dockerfile)** 사용 (Playwright Chromium 포함)
+2. 필수 환경 변수: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`
+3. Supabase 마이그레이션: [api/README.md](api/README.md)의 SQL 파일을 순서대로 실행
 
-1. Vercel 환경 변수 `NEXT_PUBLIC_API_URL`을 해당 API URL로 수정
-2. API 서버에 `CORS_ORIGINS` (커스텀 도메인 사용 시) 설정  
-   - `*.vercel.app` 도메인은 [api/app/main.py](api/app/main.py)에서 이미 허용됨
+### 배포 후 작업
+
+1. Vercel의 `NEXT_PUBLIC_API_URL`을 백엔드 URL로 변경
+2. 커스텀 도메인 사용 시: `CORS_ORIGINS`에 Vercel 도메인 추가
+   - `*.vercel.app`는 [api/app/main.py](api/app/main.py)에서 이미 허용됨
 
 ---
 
-## Monorepo: 챗봇 + 관리자 2개 URL
+## Monorepo: 챗봇 추가 시
 
-챗봇 앱이 추가되면 **저장소는 하나**, **Vercel 프로젝트는 2개**로 운영합니다.
+향후 `cosmetic-chat` 챗봇이 추가되면 **동일 저장소**에서 **Vercel 프로젝트 2개**로 운영합니다.
 
-| Vercel 프로젝트 | Root Directory | 결과 URL |
-|-----------------|----------------|----------|
-| snowwhite-admin | `cosmetic-admin` | admin.xxx.vercel.app |
-| snowwhite-chat | `cosmetic-chat` | chat.xxx.vercel.app |
-
-동일한 GitHub 저장소를 import하고, Root Directory만 다르게 설정하면 됩니다.
+| Vercel 프로젝트 | Root Directory | 결과 |
+|-----------------|----------------|------|
+| snowwhite-admin | `cosmetic-admin` | admin용 URL |
+| snowwhite-chat | `cosmetic-chat` | chat용 URL |
 
 ---
 
 ## 체크리스트
 
-- [x] GitHub 저장소 연결 (`webkee/snowwhite`)
-- [ ] `git push origin main` 실행 (미푸시된 커밋이 있으면)
-- [ ] Vercel에서 `cosmetic-admin`을 Root Directory로 import
-- [ ] `NEXT_PUBLIC_API_URL` 환경 변수 설정 (최소: `http://localhost:8000` 로컬 테스트용)
+- [x] GitHub 저장소 연결 (webkee/snowwhite)
+- [ ] `git push origin main` 실행
+- [ ] Vercel에서 cosmetic-admin Root Directory로 import
+- [ ] `NEXT_PUBLIC_API_URL` 환경 변수 설정
 - [ ] (선택) FastAPI 백엔드 배포 및 CORS 확인
 - [ ] 배포 URL 접속 테스트
+
+---
+
+## 참고 문서
+
+- API 설정/실행: [api/README.md](api/README.md)
