@@ -2,6 +2,9 @@
 
 관리자 대시보드(cosmetic-admin)를 GitHub와 Vercel로 배포하는 방법입니다.
 
+> **현재 상태**: Git 초기화 및 Initial commit 완료됨.  
+> GitHub 저장소 생성 후 아래 1.2 단계부터 진행하세요.
+
 ## 사전 요약
 
 | 구성요소 | 위치 | 배포 대상 |
