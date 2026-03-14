@@ -139,6 +139,65 @@ export function getCosingExportCsvUrl(): string {
   return `${API_BASE}/crawl/cosing/export/csv`;
 }
 
+// --- 성분 DB 조회 ---
+
+/** KCA(대한화장품협회) 성분사전 레코드 */
+export interface KciaIngredientRecord {
+  id?: string;
+  ingredient_code?: string;
+  ingredient_name?: string;
+  old_name?: string;
+  english_name?: string;
+  cas_number?: string;
+  origin_definition?: string;
+  blend_purpose?: string;
+  source_url?: string;
+  crawled_at?: string;
+}
+
+/** CosIng 레코드 */
+export interface CosingIngredientRecord {
+  id?: string;
+  inci_name?: string;
+  description?: string;
+  cas_number?: string;
+  ec_number?: string;
+  identified_ingredients?: string;
+  cosmetics_regulation_provisions?: string;
+  functions?: string;
+  sccs_opinions?: string;
+  kcia_english_name?: string;
+  source_url?: string;
+  crawled_at?: string;
+  cosing_id?: string;
+}
+
+/** KCA 성분 검색 */
+export async function searchKciaIngredients(
+  q: string,
+  limit: number = 50
+): Promise<KciaIngredientRecord[]> {
+  const params = new URLSearchParams({ q: q.trim(), limit: String(limit) });
+  const res = await fetch(`${API_BASE}/ingredients/kcia/search?${params}`);
+  if (!res.ok) {
+    throw wrapFetchError(new Error(await res.text()), "KCA 성분 검색 실패");
+  }
+  return res.json();
+}
+
+/** CosIng 성분 검색 */
+export async function searchCosingIngredients(
+  q: string,
+  limit: number = 50
+): Promise<CosingIngredientRecord[]> {
+  const params = new URLSearchParams({ q: q.trim(), limit: String(limit) });
+  const res = await fetch(`${API_BASE}/ingredients/cosing/search?${params}`);
+  if (!res.ok) {
+    throw wrapFetchError(new Error(await res.text()), "CosIng 성분 검색 실패");
+  }
+  return res.json();
+}
+
 // --- Olive Young 스킨케어 ---
 
 export async function startOliveSkincareCrawl(

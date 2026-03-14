@@ -7,7 +7,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import crawl
+from app.routers import crawl, ingredients
 
 app = FastAPI(
     title="KCA 성분 크롤러 API",
@@ -39,6 +39,7 @@ app.add_middleware(
 )
 
 app.include_router(crawl.router, prefix="/crawl", tags=["crawl"])
+app.include_router(ingredients.router, prefix="/ingredients", tags=["ingredients"])
 
 
 @app.get("/health")

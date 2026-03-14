@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { CrawlerCard } from "@/components/admin/ingredient-crawler/CrawlerCard";
+import { IngredientDbSearch } from "@/components/admin/ingredient-crawler/IngredientDbSearch";
 import type { CrawlSource, CrawlState } from "@/lib/ingredient-crawler-types";
 import { INITIAL_CRAWL_STATE } from "@/lib/ingredient-crawler-types";
 import {
@@ -202,6 +203,8 @@ export default function IngredientCrawlerPage() {
       </p>
 
       <div className="mt-8 space-y-6">
+        <IngredientDbSearch />
+
         <CrawlerCard
           title="대한화장품협회 성분사전"
           source="kcia"
