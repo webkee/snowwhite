@@ -117,6 +117,20 @@ async def run_cosing_crawl(resume: bool = False) -> None:
         first = (row.data or [{}])[0] if row.data else {}
         return bool(first.get("abort_requested"))
 
+    async def sleep_with_abort_check(seconds: float, interval: float = 0.5) -> bool:
+        """
+        sleep 중 abort_requested를 주기적으로 확인.
+        Returns True if abort was requested (caller should exit), False otherwise.
+        """
+        elapsed = 0.0
+        while elapsed < seconds:
+            if check_abort_requested():
+                return True
+            chunk = min(interval, seconds - elapsed)
+            await asyncio.sleep(chunk)
+            elapsed += chunk
+        return False
+
     try:
         # kcia_ingredients에서 english_name 조회 (NULL 제외, 중복 제거)
         result = (
@@ -186,6 +200,16 @@ async def run_cosing_crawl(resume: bool = False) -> None:
         csv_writer.writeheader()
         logger.info("CSV 저장 경로: %s", csv_path)
 
+        if check_abort_requested():
+            update_state(
+                "aborted",
+                processed_count=0,
+                last_ingredient_code=None,
+                ended_at=datetime.now(timezone.utc),
+                abort_requested=False,
+            )
+            return
+
         from playwright.async_api import async_playwright
 
         processed_total = 0
@@ -202,15 +226,40 @@ async def run_cosing_crawl(resume: bool = False) -> None:
                     page = await context.new_page()
 
                     # 검색 페이지로 이동
+                    if check_abort_requested():
+                        update_state(
+                            "aborted",
+                            processed_count=0,
+                            last_ingredient_code=None,
+                            ended_at=datetime.now(timezone.utc),
+                            abort_requested=False,
+                        )
+                        return
                     await page.goto(COSING_BASE, wait_until="domcontentloaded", timeout=30000)
-                    await asyncio.sleep(1.0)
+                    if await sleep_with_abort_check(1.0):
+                        update_state(
+                            "aborted",
+                            processed_count=0,
+                            last_ingredient_code=None,
+                            ended_at=datetime.now(timezone.utc),
+                            abort_requested=False,
+                        )
+                        return
 
                     # 쿠키 동의 처리 (있을 경우)
                     try:
                         accept_btn = page.get_by_role("button", name="Accept all cookies").first
                         if await accept_btn.is_visible():
                             await accept_btn.click()
-                            await asyncio.sleep(0.5)
+                            if await sleep_with_abort_check(0.5):
+                                update_state(
+                                    "aborted",
+                                    processed_count=0,
+                                    last_ingredient_code=None,
+                                    ended_at=datetime.now(timezone.utc),
+                                    abort_requested=False,
+                                )
+                                return
                     except Exception:
                         pass
 
@@ -222,6 +271,7 @@ async def run_cosing_crawl(resume: bool = False) -> None:
                                 processed_count=processed_total,
                                 last_ingredient_code=last_processed_name,
                                 ended_at=datetime.now(timezone.utc),
+                                abort_requested=False,
                             )
                             return
 
@@ -239,12 +289,28 @@ async def run_cosing_crawl(resume: bool = False) -> None:
                             await keyword_input.fill("")
                             await asyncio.sleep(0.2)
                             await keyword_input.fill(english_name)
-                            await asyncio.sleep(request_delay)
+                            if await sleep_with_abort_check(request_delay):
+                                update_state(
+                                    "aborted",
+                                    processed_count=processed_total,
+                                    last_ingredient_code=last_processed_name,
+                                    ended_at=datetime.now(timezone.utc),
+                                    abort_requested=False,
+                                )
+                                return
 
                             # Search 클릭
                             search_btn = page.get_by_role("button", name="Search").first
                             await search_btn.click()
-                            await asyncio.sleep(search_delay)
+                            if await sleep_with_abort_check(search_delay):
+                                update_state(
+                                    "aborted",
+                                    processed_count=processed_total,
+                                    last_ingredient_code=last_processed_name,
+                                    ended_at=datetime.now(timezone.utc),
+                                    abort_requested=False,
+                                )
+                                return
 
                             # 결과 테이블의 INCI Name/Substance 링크 수집
                             detail_links: list[str] = []
@@ -281,12 +347,21 @@ async def run_cosing_crawl(resume: bool = False) -> None:
                                         processed_count=processed_total,
                                         last_ingredient_code=last_processed_name,
                                         ended_at=datetime.now(timezone.utc),
+                                        abort_requested=False,
                                     )
                                     return
 
                                 try:
                                     await page.goto(detail_url, wait_until="domcontentloaded", timeout=20000)
-                                    await asyncio.sleep(detail_delay)
+                                    if await sleep_with_abort_check(detail_delay):
+                                        update_state(
+                                            "aborted",
+                                            processed_count=processed_total,
+                                            last_ingredient_code=last_processed_name,
+                                            ended_at=datetime.now(timezone.utc),
+                                            abort_requested=False,
+                                        )
+                                        return
 
                                     html = await page.content()
                                     parsed = parse_detail_page(
@@ -313,7 +388,15 @@ async def run_cosing_crawl(resume: bool = False) -> None:
                                         )
 
                                     await page.go_back()
-                                    await asyncio.sleep(request_delay)
+                                    if await sleep_with_abort_check(request_delay):
+                                        update_state(
+                                            "aborted",
+                                            processed_count=processed_total,
+                                            last_ingredient_code=last_processed_name,
+                                            ended_at=datetime.now(timezone.utc),
+                                            abort_requested=False,
+                                        )
+                                        return
                                 except Exception as e:
                                     logger.warning("상세 페이지 처리 실패 %s: %s", detail_url, e)
 
