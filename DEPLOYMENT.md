@@ -2,8 +2,8 @@
 
 관리자 대시보드(cosmetic-admin)를 GitHub와 Vercel로 배포하는 방법입니다.
 
-> **현재 상태**: Git 초기화 및 Initial commit 완료됨.  
-> GitHub 저장소 생성 후 아래 1.2 단계부터 진행하세요.
+> **현재 상태**: Git 초기화 완료, origin: `https://github.com/webkee/snowwhite.git`  
+> 로컬 커밋 후 `git push origin main` 실행 시 GitHub에 반영됨. (인증 필요)
 
 ## 사전 요약
 
@@ -94,15 +94,17 @@ cd /Users/igigi/cursor_ws/snowwhite   # 또는 snowwhite 루트로 이동
 
 | 플랫폼 | 난이도 | 비고 |
 |--------|--------|------|
-| Railway | 낮음 | Dockerfile 또는 `uvicorn` 직접 실행 |
-| Render | 낮음 | Web Service, 무료 티어 |
-| Fly.io | 중간 | `fly launch` 사용 |
+| Railway | 낮음 | `api/Dockerfile` 사용, Docker 배포 |
+| Render | 낮음 | Web Service, Dockerfile, 무료 티어 |
+| Fly.io | 중간 | `fly launch` (api/ 폴더에서 실행) |
+
+**Dockerfile**: [api/Dockerfile](api/Dockerfile) — Playwright(Chromium) 포함. `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` 환경 변수 필수.
 
 배포 후:
 
 1. Vercel 환경 변수 `NEXT_PUBLIC_API_URL`을 해당 API URL로 수정
 2. API 서버에 `CORS_ORIGINS` (커스텀 도메인 사용 시) 설정  
-   - `*.vercel.app` 도메인은 기본 허용됨
+   - `*.vercel.app` 도메인은 [api/app/main.py](api/app/main.py)에서 이미 허용됨
 
 ---
 
@@ -121,8 +123,9 @@ cd /Users/igigi/cursor_ws/snowwhite   # 또는 snowwhite 루트로 이동
 
 ## 체크리스트
 
-- [ ] GitHub 저장소 생성 및 코드 푸시
+- [x] GitHub 저장소 연결 (`webkee/snowwhite`)
+- [ ] `git push origin main` 실행 (미푸시된 커밋이 있으면)
 - [ ] Vercel에서 `cosmetic-admin`을 Root Directory로 import
-- [ ] `NEXT_PUBLIC_API_URL` 환경 변수 설정
-- [ ] (선택) FastAPI 백엔드 배포 및 CORS 설정
+- [ ] `NEXT_PUBLIC_API_URL` 환경 변수 설정 (최소: `http://localhost:8000` 로컬 테스트용)
+- [ ] (선택) FastAPI 백엔드 배포 및 CORS 확인
 - [ ] 배포 URL 접속 테스트
